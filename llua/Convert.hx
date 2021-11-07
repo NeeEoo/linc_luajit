@@ -6,6 +6,7 @@ import llua.Lua;
 import llua.LuaL;
 import llua.Macro.*;
 import haxe.DynamicAccess;
+
 class Convert {
 
 	/**
@@ -161,7 +162,7 @@ class Convert {
 	}
 
 }*/
-	static function toHaxeObj(l, i:Int):Any {
+	static inline function toHaxeObj(l:State, i:Int):Any {
 		var count = 0;
 		var array = true;
 
@@ -191,7 +192,7 @@ class Convert {
 			loopTable(l, i, {
 				switch Lua.type(l, -2) {
 					case t if(t == Lua.LUA_TSTRING): v.set(Lua.tostring(l, -2), fromLua(l, -1));
-					case t if(t == Lua.LUA_TNUMBER):v.set(Std.string(Lua.tonumber(l, -2)), fromLua(l, -1));
+					case t if(t == Lua.LUA_TNUMBER): v.set(Std.string(Lua.tonumber(l, -2)), fromLua(l, -1));
 				}
 			});
 			cast v;
