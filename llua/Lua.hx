@@ -63,7 +63,12 @@ extern class Lua {
 	// static function newstate(f:lua_Alloc, ud:Void) : State;
 
 	@:native('lua_close')
-	static function close(l:State) : Void;
+	static function _close(l:State) : Void;
+
+	static inline function close(l:State) : Void {
+		Lua_helper.remove_callbacks_by_state(l);
+		_close(l);
+	};
 
 	@:native('lua_newthread')
 	static function newthread(l:State) : State;
@@ -360,7 +365,7 @@ extern class Lua {
 
 	static inline function register(l:State, name:String, f:Dynamic) : Void {
 
-		if(Type.typeof(f) == Type.ValueType.TFunction && !Lua_helper.callbacks.exists(name)){
+		if(Type.typeof(f) == Type.ValueType.TFunction && !Lua_helper.get_callbacks(l).exists(name)){
 			Lua_helper.add_callback(l, name, f);
 		}
 
@@ -544,11 +549,36 @@ class Lua_helper {
 
 	}
 
-	public static var callbacks:Map<String, Dynamic> = new Map();
+	// [State, Map<String, Dynamic>]
+	public static var callbacks:Array<Dynamic> = [];
 
-	public static inline function add_callback(l:State, fname:String, f:Dynamic):Bool {
+	// Has to be l:Dynamic since it wont compile otherwise
+	public static function get_callbacks(l:Dynamic):Map<String, Dynamic> {
+		for(entry in callbacks) {
+			if(entry[0] == l) {
+				return entry[1];
+			}
+		}
+		return null;
+	}
 
-		callbacks.set(fname, f);
+	public static function remove_callbacks_by_state(l:Dynamic): Void {
+		for(entry in callbacks) {
+			if(entry[0] == l) {
+				callbacks.remove(entry);
+				return;
+			}
+		}
+	}
+
+	public static function add_new_state(l:State): Void {
+		var callbacksMap:Map<String, Dynamic> = new Map();
+		callbacks.push([l, callbacksMap]);
+	}
+
+	public static function add_callback(l:State, fname:String, f:Dynamic):Bool {
+
+		get_callbacks(l).set(fname, f);
 		Lua.add_callback_function(l, fname);
 		return true;
 
@@ -556,7 +586,7 @@ class Lua_helper {
 
 	public static inline function remove_callback(l:State, fname:String):Bool {
 
-		callbacks.remove(fname);
+		get_callbacks(l).remove(fname);
 		Lua.remove_callback_function(l, fname);
 		return true;
 
@@ -564,7 +594,7 @@ class Lua_helper {
 
 	public static inline function callback_handler(l:State, fname:String):Int {
 
-		var cbf = callbacks.get(fname);
+		var cbf = get_callbacks(l).get(fname);
 
 		if(cbf == null) {
 			return 0;

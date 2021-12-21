@@ -89,7 +89,13 @@ extern class LuaL {
     static function loadstring(l:State, s:String) : Int;
 
     @:native('luaL_newstate')
-    static function newstate() : State;
+    static function _newstate() : State;
+
+    static inline function newstate() : State {
+      var state = _newstate();
+      Lua_helper.add_new_state(state);
+      return state;
+    };
 
     @:native('linc::lual::gsub')
     static function gsub(l:State, s:String, p:String, r:String) : String;
